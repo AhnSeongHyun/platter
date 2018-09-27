@@ -1,0 +1,13 @@
+sudo: false
+language: python
+python:
+  - "3.6"
+services:
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE {{app}}'
+install: pip install -r ./requirements
+script:
+  - pytest -s --cov={{app}}/
+notifications:
+  slack: xxxx
