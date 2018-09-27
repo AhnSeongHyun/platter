@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        platter=platter:cli
+        platter=platter
     ''',
 )
