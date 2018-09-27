@@ -4,7 +4,8 @@ import sys
 import shutil
 import os
 import signal 
-from uuid import uuid1 
+from uuid import uuid1
+from jinja2 import FileSystemLoader, Environment
 
 @click.command()
 @click.option('--app_name', prompt='app name', default=None, help='enter app name')
@@ -55,9 +56,31 @@ def generate_app(app_name):
 
         print('resources:{}'.format(resources))
 
+
+        render_params = {'db_host':db_host, 'db_user':db_user, 'db_password':db_password, 'app':app_name, 'resources':resources}
+        # conv
+        conv_file_list = ['app.py',
+                          'README.md',
+                          'start.sh',
+                          'gunicorn_config.ini',
+                          'config.py',
+                          'commons/logger.py',
+                          'commons/sentry.py',
+                          ]
+        from os.path import join as path_join
+        from os.path import split as path_split
+        conv_file_path_list = [path_join(cp_path, file) for file in conv_file_list]
+
+        for conv_file_path in conv_file_path_list:
+            print(conv_file_path)
+            directory, template_file = path_split(conv_file_path)
+            render_from_template(directory, template_file, **render_params)
+
+
+
         # todo : 순회하면서 기존 파일에서 재작성
-        for root, dirs, files, in os.walk(cp_path, topdown=False):
-            print(root, dirs, files)
+        # for root, dirs, files, in os.walk(cp_path, topdown=False):
+        #     print(root, dirs, files)
  
 
 
@@ -78,14 +101,11 @@ def generate_app(app_name):
         print(e)
 
 
-def render_file(template_file_path, app_name, resoucre=None):
-    from jinja2 import Environment
-    from jinja2 import PackageLoader
-    
-    env = Environment(loader=PackageLoader(package, 'templates'), autoescape=False, extensions=['jinja2.ext.autoescape'])
-    t = env.get_template(template_file_path)
-    rendered_template = t.render({'app':app_name, 'resource':resource})
-    return rendered_template
+def render_from_template(directory, template_name, **kwargs):
+    loader = FileSystemLoader(directory)
+    env = Environment(loader=loader)
+    template = env.get_template(template_name)
+    return template.render(**kwargs)
 
 
 if __name__ == '__main__':
