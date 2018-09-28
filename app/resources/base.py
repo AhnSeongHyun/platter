@@ -12,11 +12,9 @@ from {{app}}.commons.sentry import client
 
 def exception_handler(func):
     """
-    각종 예외에 대한 처리
-    :param func: VIEW/API 메소드
+    :param func: VIEW/API
     :return: HTTP RESPONSE
     """
-
     @wraps(func)
     def new_func(*args, **kwargs):
 
@@ -31,7 +29,5 @@ def exception_handler(func):
             logger.exception(traceback.format_exc())
             client.captureException()
             return ResponseData(code=HttpStatusCode.INTERNAL_SERVER_ERROR, lang=lang).json
-
         return result
-
     return new_func

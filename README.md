@@ -1,10 +1,8 @@
 platter
 =========
 
-developing
-
 ```shell
-> platter *app_name*
+> platter app_name
 ```
 
 

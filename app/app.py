@@ -5,8 +5,10 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
 from flask import Flask
+from flask import request
 from flask import render_template
 from {{app}}.extensions import db, login_manager, cache, sentry
+from {{app}}.commons.logger import logger
 from flask.sessions import SessionInterface
 from beaker.middleware import SessionMiddleware
 
@@ -30,6 +32,22 @@ def create_app(config_obj='config.ProductionConfig'):
     configure_jinja(app)
     configure_filter(app)
     configure_error_handlers(app)
+
+    @app.after_request
+    def response_checker(response):
+        if response.headers['Content-Type'] == 'application/json':
+            logger.debug("[{}] URL : {} STATUS_CODE : {} RESPONSE : {}".format(request.method,
+                                                                               request.url,
+                                                                               response.status_code,
+                                                                               str(response.data)))
+        # disable cache
+        from datetime import datetime
+        response.headers['Last-Modified'] = datetime.now()
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        return response
+
     return app
 
 
