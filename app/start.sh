@@ -1,2 +1,1 @@
-./compile.sh
-gunicorn -c app:app -c config.ini
+gunicorn app:app -c gunicorn_config.ini

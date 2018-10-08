@@ -4,20 +4,34 @@ import pprint
 import shutil
 import signal
 import sys
+from os.path import join as path_join
+from os.path import split as path_split
 from uuid import uuid1
 
 import click
-from jinja2 import FileSystemLoader, Environment
+from colorama import Fore, Style
 from colorama import init
-from colorama import Fore, Back, Style
+from jinja2 import FileSystemLoader, Environment
+
 init()
+ci = """                                                
+ #####  #        ##   ##### ##### ###### #####  
+ #    # #       #  #    #     #   #      #    # 
+ #    # #      #    #   #     #   #####  #    # 
+ #####  #      ######   #     #   #      #####  
+ #      #      #    #   #     #   #      #   #  
+ #      ###### #    #   #     #   ###### #    #                                                 
+"""
+print(Fore.BLUE)
+print(ci)
 
 @click.command()
 @click.option('--app_name', prompt=Fore.YELLOW + 'App Name', default=None, help='enter app name')
 def generate_app(app_name):
 
-    from os.path import join as path_join
-    from os.path import split as path_split
+    working_dir = os.getcwd()
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+
     # 디렉토리 복사
     try:
         cp_path = None 
@@ -32,8 +46,9 @@ def generate_app(app_name):
 
         signal.signal(signal.SIGINT, sig_test)
 
-        cp_path = '.{}_{}_{}'.format(os.sep, app_name, str(uuid1()))
-        shutil.copytree('.{}app'.format(os.sep), cp_path)
+        template_app_dir_path = path_join(package_dir, 'app')
+        cp_path = path_join(working_dir, '{}_{}'.format(app_name, str(uuid1())))
+        shutil.copytree(template_app_dir_path, cp_path)
 
         # 리소스 입력 받기
         resources = ['user', 'admin']
@@ -75,15 +90,16 @@ def generate_app(app_name):
         print(Fore.BLUE + 'App Info : {}'.format(pprint.pformat(render_params)))
 
         # create file
-        conv_file_list = ['app.py',
-                          'README.md',
-                          '.travis.yml',
-                          'gunicorn_config.ini',
-                          'config.py',
-                          'resources{}base.py'.format(os.sep),
-                          'commons{}jwt_token.py'.format(os.sep),
-                          'commons{}logger.py'.format(os.sep),
-                          'commons{}sentry.py'.format(os.sep),
+        conv_file_list = ['app.py.j2',
+                          'README.md.j2',
+                          '.travis.yml.j2',
+                          'gunicorn_config.ini.j2',
+                          'config.py.j2',
+                          'resources{}base.py.j2'.format(os.sep),
+                          'models{}base.py.j2'.format(os.sep),
+                          'commons{}jwt_token.py.j2'.format(os.sep),
+                          'commons{}logger.py.j2'.format(os.sep),
+                          'commons{}sentry.py.j2'.format(os.sep),
                           ]
         conv_file_path_list = [path_join(cp_path, file) for file in conv_file_list]
 
@@ -91,12 +107,13 @@ def generate_app(app_name):
         for conv_file_path in conv_file_path_list:
             directory, template_file = path_split(conv_file_path)
             rendered_template = render_from_template(directory, template_file, **render_params)
-            with open(conv_file_path, 'w') as f:
+            with open(conv_file_path[:conv_file_path.find('.j2')], 'w') as f:
                 f.write(rendered_template)
 
             print('create file    : {}'.format(conv_file_path))
+            os.remove(conv_file_path)
 
-        model_template = 'models{}model_template.py'.format(os.sep)
+        model_template = 'models{}model_template.py.j2'.format(os.sep)
 
         # create model
         model_template_path = path_join(cp_path, model_template)
@@ -123,8 +140,8 @@ def generate_app(app_name):
             shutil.copytree(resources_template_dir_path, dst_resource_dir_path)
             print('create resource: {} => {}'.format(resources_template_dir_path, dst_resource_dir_path))
 
-            template_api_file_path = path_join(dst_resource_dir_path, 'resource_api.py')
-            template_view_file_path = path_join(dst_resource_dir_path, 'resource_view.py')
+            template_api_file_path = path_join(dst_resource_dir_path, 'resource_api.py.j2')
+            template_view_file_path = path_join(dst_resource_dir_path, 'resource_view.py.j2')
             dst_api_file_path = path_join(dst_resource_dir_path, '{}_api.py'.format(r))
             dst_view_file_path = path_join(dst_resource_dir_path, '{}_view.py'.format(r))
             shutil.move(template_api_file_path, dst_api_file_path)
@@ -153,6 +170,12 @@ def generate_app(app_name):
         mv_path = path_join(mv_path, app_name)
         shutil.copytree(cp_path, mv_path)
         shutil.rmtree(cp_path)
+
+        # remove __pycache__
+        for d, folders, files in os.walk(mv_path):
+            if '__pycache__' in d:
+                shutil.rmtree(d)
+
         print(Fore.BLUE, end='')
         print(Style.DIM, end='')
         print('=' * 40)
@@ -169,17 +192,3 @@ def render_from_template(directory, template_name, **kwargs):
     env = Environment(loader=loader)
     template = env.get_template(template_name)
     return template.render(**kwargs)
-
-
-if __name__ == '__main__':
-    print(Fore.BLUE)
-    ci = """                                                
- #####  #        ##   ##### ##### ###### #####  
- #    # #       #  #    #     #   #      #    # 
- #    # #      #    #   #     #   #####  #    # 
- #####  #      ######   #     #   #      #####  
- #      #      #    #   #     #   #      #   #  
- #      ###### #    #   #     #   ###### #    #                                                 
-"""
-    print(ci)
-    generate_app()
